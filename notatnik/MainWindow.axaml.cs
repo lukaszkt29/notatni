@@ -1,21 +1,25 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
+using System.Text;
 
 namespace notatnik;
 
-public class NoteItem
+public class NoteEntry
 {
+    public string Timestamp { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
+
+    public string DisplayText => $"{Timestamp} — {Title}\n{Content}";
 }
 
 public partial class MainWindow : Window
 {
-    private const string FilePath = "notes.json";
-    private readonly List<NoteItem> _notes = new();
+    private const string FilePath = "notatki.md";
+    private readonly List<NoteEntry> _notes = new();
 
     public MainWindow()
     {
@@ -25,14 +29,30 @@ public partial class MainWindow : Window
 
     private void LoadNotes()
     {
+        _notes.Clear();
         if (File.Exists(FilePath))
         {
-            var json = File.ReadAllText(FilePath);
-            var loaded = JsonSerializer.Deserialize<List<NoteItem>>(json);
-            if (loaded != null)
+            var text = File.ReadAllText(FilePath, Encoding.UTF8);
+            var blocks = text.Split(new[] { "\n## ", "\r\n## " }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var block in blocks)
             {
-                _notes.Clear();
-                _notes.AddRange(loaded);
+                var cleanBlock = block.StartsWith("## ") ? block.Substring(3) : block;
+                var lines = cleanBlock.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                if (lines.Length > 0)
+                {
+                    var header = lines[0];
+                    var dashIndex = header.IndexOf(" — ");
+                    var timestamp = dashIndex > 0 ? header.Substring(0, dashIndex).Trim() : string.Empty;
+                    var title = dashIndex > 0 ? header.Substring(dashIndex + 3).Trim() : header.Trim();
+                    var content = lines.Length > 1 ? string.Join(Environment.NewLine, lines, 1, lines.Length - 1).Trim() : string.Empty;
+
+                    _notes.Add(new NoteEntry
+                    {
+                        Timestamp = timestamp,
+                        Title = title,
+                        Content = content
+                    });
+                }
             }
         }
         UpdateList();
@@ -42,22 +62,26 @@ public partial class MainWindow : Window
     {
         var title = TitleBox.Text ?? string.Empty;
         var content = ContentBox.Text ?? string.Empty;
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
-        var note = new NoteItem { Title = title, Content = content };
-        _notes.Add(note);
+        var newEntryText = $"## {timestamp} — {title}{Environment.NewLine}{content}{Environment.NewLine}";
 
-        var json = JsonSerializer.Serialize(_notes, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(FilePath, json);
+        string existingText = File.Exists(FilePath) ? File.ReadAllText(FilePath, Encoding.UTF8) : string.Empty;
+        string fullContent = string.IsNullOrEmpty(existingText)
+            ? newEntryText
+            : newEntryText + Environment.NewLine + existingText.TrimStart();
+
+        File.WriteAllText(FilePath, fullContent, Encoding.UTF8);
 
         TitleBox.Text = string.Empty;
         ContentBox.Text = string.Empty;
 
-        UpdateList();
+        LoadNotes();
     }
 
     private void UpdateList()
     {
         NotesList.ItemsSource = null;
-        NotesList.ItemsSource = _notes.ConvertAll(n => $"{n.Title}: {n.Content}");
+        NotesList.ItemsSource = _notes.ConvertAll(n => n.DisplayText);
     }
 }
