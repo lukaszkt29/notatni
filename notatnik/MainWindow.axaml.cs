@@ -35,7 +35,6 @@ public partial class MainWindow : Window
         if (File.Exists(FilePath))
         {
             var text = File.ReadAllText(FilePath, Encoding.UTF8);
-            // Podział po kolejnych sekcjach zaczynających się od nagłówka poziomu 2
             var rawEntries = text.Split(new[] { "\r\n## ", "\n## " }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var raw in rawEntries)
             {
@@ -89,7 +88,15 @@ public partial class MainWindow : Window
             ? newEntry + Environment.NewLine
             : newEntry + Environment.NewLine + Environment.NewLine + existingText + Environment.NewLine;
 
-        File.WriteAllText(FilePath, fullContent, Encoding.UTF8);
+        try
+        {
+            File.WriteAllText(FilePath, fullContent, Encoding.UTF8);
+            StatusText.Text = "Zapisano";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Nie udało się zapisać: {ex.Message}";
+        }
 
         TitleBox.Text = string.Empty;
         ContentBox.Text = string.Empty;
