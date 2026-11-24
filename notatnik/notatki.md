@@ -1,3 +1,6 @@
+﻿## 2026-11-24 15:06 — Weryfikacja 24 listopada
+Zapis żółty — test 3.4
+
 ## 2026-11-17 15:54 — Podsumowanie testów
 Wszystkie pięć notatek zapisane pomyślnie. Żadna notatka nie zginęła, najnowsza znajduje się na samej górze.
 
